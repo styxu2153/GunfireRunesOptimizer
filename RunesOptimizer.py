@@ -48,9 +48,10 @@ def main() -> None:
         print("Szukam najlepszego ulozenia (potrwa kilka sekund)...")
 
         config = SolverConfig(
-            iterations=100000,
-            num_restarts=5,
-            initial_temperature=30.0
+            iterations=300000,
+            num_restarts=6,
+            initial_temperature=25.0,
+            cooling_rate=0.99996
         )
         
         best_state, _ = solve_with_restarts(my_runes, my_stones, config)

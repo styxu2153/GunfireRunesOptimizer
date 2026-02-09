@@ -116,7 +116,7 @@ class BoardState:
         # Balanced heuristic score:
         # R10 is important (2.5x base), but not untouchable. 
         # Loss of 1pt in R10 can be offset by +3pt in others.
-        score = (r10_level * 1.5) + (total_levels * 1.0) + (maxed_sub10_count * 1.0) + (even_count * 0.2)
+        score = (r10_level * 1.5) + (total_levels * 1.0) + (maxed_sub10_count * 1.0) + (even_count * 0.4)
         return score
 
     def get_total_rune_levels(self) -> int:

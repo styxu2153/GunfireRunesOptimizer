@@ -136,11 +136,22 @@ def solve_layout(
         if temp < config.min_temperature:
             temp = config.min_temperature
 
-    # Restore best
-    final_state = BoardState(grid=best_state_grid, runes=runes, stones=stones)
-    for s in final_state.stones:
-        s.rotation = best_stone_rotations[s.id]
-    
+    # Restore best: use original objects but set their best positions and rotations
+    final_grid = {}
+    # Map from object id to its position in the best grid
+    # Since we can't reliably use objects as keys after deepcopy, 
+    # we'll use the positions from the deepcopied grid to place our original objects.
+    for pos, item_copy in best_state_grid.items():
+        # Find the original object matching this item_copy
+        if isinstance(item_copy, Rune):
+            original = next(r for r in runes if r.id == item_copy.id)
+            final_grid[pos] = original
+        elif isinstance(item_copy, Stone):
+            original = next(s for s in stones if s.id == item_copy.id)
+            original.rotation = best_stone_rotations[original.id]
+            final_grid[pos] = original
+            
+    final_state = BoardState(grid=final_grid, runes=runes, stones=stones)
     return final_state, best_score
 
 
