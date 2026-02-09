@@ -113,13 +113,10 @@ class BoardState:
             if final > 0 and final % 2 == 0:
                 even_count += 1
                 
-        # Heuristic score based on priorities (Strict Hierarchy):
-        # 1. R10 Level (Highest Priority)
-        # 2. Total Sum of Levels
-        # 3. Maxed Sub-10 Count
-        # 4. Even Level Count (Lowest Priority)
-        # Weights are chosen to ensure hierarchy while staying within reasonable range for the solver
-        score = (r10_level * 100.0) + (total_levels * 1.0) + (maxed_sub10_count * 0.1) + (even_count * 0.01)
+        # Balanced heuristic score:
+        # R10 is important (2.5x base), but not untouchable. 
+        # Loss of 1pt in R10 can be offset by +3pt in others.
+        score = (r10_level * 1.5) + (total_levels * 1.0) + (maxed_sub10_count * 1.0) + (even_count * 0.2)
         return score
 
     def get_total_rune_levels(self) -> int:
@@ -128,4 +125,6 @@ class BoardState:
 
     def get_integer_score(self) -> int:
         """Returns the total sum of levels for display purposes."""
+        # Ensure scores are calculated before returning the sum
+        self.calculate_total_score()
         return self.get_total_rune_levels()

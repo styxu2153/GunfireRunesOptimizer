@@ -13,7 +13,7 @@ def print_board(state: BoardState) -> None:
         state: The board state to display.
     """
     score = state.calculate_total_score()
-    integer_score = int(score)
+    integer_score = state.get_integer_score()
     
     print(f"\n=== ZNALEZIONE ROZWIAZANIE (Suma poziomow: {integer_score}) ===")
 

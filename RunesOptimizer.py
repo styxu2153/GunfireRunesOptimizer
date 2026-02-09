@@ -49,7 +49,8 @@ def main() -> None:
 
         config = SolverConfig(
             iterations=100000,
-            num_restarts=3
+            num_restarts=5,
+            initial_temperature=30.0
         )
         
         best_state, _ = solve_with_restarts(my_runes, my_stones, config)

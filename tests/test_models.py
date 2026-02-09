@@ -207,19 +207,20 @@ class TestBoardState:
 
     def test_priority_hierarchy(self) -> None:
         """Verify the priority: 10/10 > 6/6 > 6/5."""
-        rune_10 = Rune("R10", 10)
-        rune_6 = Rune("R6", 6)
-        
         # 1. 10/10 case (R10 level 5, R6 level 0)
-        state_10 = BoardState(runes=[rune_10, rune_6], stones=[Stone("K1", [StoneVector(1,0,5)])])
+        rune_10a = Rune("R10", 10)
+        rune_6a = Rune("R6", 6)
+        state_10 = BoardState(runes=[rune_10a, rune_6a], stones=[Stone("K1", [StoneVector(1,0,5)])])
         state_10.grid[(0,0)] = state_10.stones[0]
-        state_10.grid[(1,0)] = rune_10
+        state_10.grid[(1,0)] = rune_10a
         score_10 = state_10.calculate_total_score()
         
         # 2. 6/6 case (R10 level 0, R6 level 6)
-        state_6_max = BoardState(runes=[rune_10, rune_6], stones=[Stone("K1", [StoneVector(1,0,6)])])
+        rune_10b = Rune("R10", 10)
+        rune_6b = Rune("R6", 6)
+        state_6_max = BoardState(runes=[rune_10b, rune_6b], stones=[Stone("K1", [StoneVector(1,0,6)])])
         state_6_max.grid[(0,0)] = state_6_max.stones[0]
-        state_6_max.grid[(1,0)] = rune_6
+        state_6_max.grid[(1,0)] = rune_6b
         score_6_max = state_6_max.calculate_total_score()
         
         # R10 level 5 should win over R6 level 6 due to highest priority

@@ -43,41 +43,52 @@ def _create_initial_state(
     return state
 
 
-def _mutate_state(state: BoardState, config: SolverConfig) -> BoardState:
-    """Create a mutated copy of the state."""
-    new_state = copy.deepcopy(state)
+def _mutate_in_place(state: BoardState, config: SolverConfig) -> Tuple[str, Any, Any, Any, Any]:
+    """
+    Mutate the state in place and return info to revert it.
+    Returns: (type, p1, p2, old_val1, old_val2)
+    """
     rand_val = random.random()
 
-    if rand_val < config.rotation_probability and new_state.stones:
+    if rand_val < config.rotation_probability and state.stones:
         # Mutation A: Rotate a stone
-        stone_to_rotate = random.choice(new_state.stones)
-        for item in new_state.grid.values():
-            if isinstance(item, Stone) and item.id == stone_to_rotate.id:
-                item.rotation = (item.rotation + 1) % 4
-                break
-    else:
-        # Mutation B: Swap positions
-        p1 = (random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1))
+        stone = random.choice(state.stones)
+        old_rot = stone.rotation
+        stone.rotation = (stone.rotation + 1) % 4
+        return ("rotate", stone, old_rot, None, None)
+    
+    # Mutation B: Swap or Move
+    p1 = (random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1))
+    p2 = (random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1))
+    while p1 == p2:
         p2 = (random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1))
 
-        i1 = new_state.grid.get(p1)
-        i2 = new_state.grid.get(p2)
+    v1 = state.grid.get(p1)
+    v2 = state.grid.get(p2)
 
-        if i1 is None and i2 is None:
-            return new_state  # No-op
+    if v1 is None and v2 is None:
+        return ("none", None, None, None, None)
 
-        # Swap in grid
-        if i1:
-            new_state.grid[p2] = i1
-        elif p2 in new_state.grid:
-            del new_state.grid[p2]
+    # Apply swap/move
+    if v1: state.grid[p2] = v1
+    elif p2 in state.grid: del state.grid[p2]
 
-        if i2:
-            new_state.grid[p1] = i2
-        elif p1 in new_state.grid:
-            del new_state.grid[p1]
+    if v2: state.grid[p1] = v2
+    elif p1 in state.grid: del state.grid[p1]
+    
+    return ("swap", p1, p2, v1, v2)
 
-    return new_state
+
+def _revert_mutation(state: BoardState, undo_info: Tuple[str, Any, Any, Any, Any]) -> None:
+    mtype, p1, p2, v1, v2 = undo_info
+    if mtype == "rotate":
+        p1.rotation = p2 # p1 is stone, p2 is old_rot
+    elif mtype == "swap":
+        if v1: state.grid[p1] = v1
+        elif p1 in state.grid: del state.grid[p1]
+        
+        if v2: state.grid[p2] = v2
+        elif p2 in state.grid: del state.grid[p2]
 
 
 def solve_layout(
@@ -85,32 +96,26 @@ def solve_layout(
     stones: List[Stone], 
     config: SolverConfig | None = None
 ) -> Tuple[BoardState, float]:
-    """
-    Find optimal rune/stone placement using simulated annealing.
-    
-    Args:
-        runes: List of runes to place.
-        stones: List of stones to place.
-        config: Solver configuration (uses defaults if None).
-    
-    Returns:
-        Tuple of (best_state, best_score).
-    """
+    """Find optimal placement using optimized SA with in-place mutations."""
     if config is None:
         config = SolverConfig()
 
     current_state = _create_initial_state(runes, stones)
-    best_state = copy.deepcopy(current_state)
-    best_score = current_state.calculate_total_score()
-    current_score = best_score
+    current_score = current_state.calculate_total_score()
+    
+    best_state_grid = copy.deepcopy(current_state.grid)
+    best_stone_rotations = {s.id: s.rotation for s in stones}
+    best_score = current_score
 
     temp = config.initial_temperature
 
-    for _ in range(config.iterations):
-        new_state = _mutate_state(current_state, config)
-        new_score = new_state.calculate_total_score()
+    for i in range(config.iterations):
+        undo = _mutate_in_place(current_state, config)
+        if undo[0] == "none": continue
+        
+        new_score = current_state.calculate_total_score()
 
-        # Acceptance criterion
+        accept = False
         if new_score > current_score:
             accept = True
         else:
@@ -118,17 +123,25 @@ def solve_layout(
             accept = random.random() < math.exp(delta / temp)
 
         if accept:
-            current_state = new_state
             current_score = new_score
             if current_score > best_score:
                 best_score = current_score
-                best_state = copy.deepcopy(current_state)
+                best_state_grid = copy.deepcopy(current_state.grid)
+                best_stone_rotations = {s.id: s.rotation for s in current_state.stones}
+        else:
+            _revert_mutation(current_state, undo)
 
+        # Cooling
         temp *= config.cooling_rate
         if temp < config.min_temperature:
             temp = config.min_temperature
 
-    return best_state, best_score
+    # Restore best
+    final_state = BoardState(grid=best_state_grid, runes=runes, stones=stones)
+    for s in final_state.stones:
+        s.rotation = best_stone_rotations[s.id]
+    
+    return final_state, best_score
 
 
 def solve_with_restarts(
