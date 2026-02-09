@@ -117,7 +117,7 @@ class BoardState:
             # since bonuses are given every 2 points.
             # Aggressive: +0.1 makes 8 (even) preferred over 9 (odd) even at 1 point cost
             if final > 0 and final % 2 == 0:
-                total_score += 0.05
+                total_score += 0.5
 
         return total_score
 

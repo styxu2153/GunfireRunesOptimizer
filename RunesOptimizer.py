@@ -5,7 +5,7 @@ Optimizes the placement of runes and stones on a 4x4 grid to maximize
 the total rune levels while prioritizing high-max-level runes.
 """
 
-from parser import parse_input_data
+from rune_parser import parse_input_data
 from solver import solve_with_restarts, SolverConfig
 from visualization import print_board
 
@@ -48,7 +48,7 @@ def main() -> None:
         print("Szukam najlepszego ulozenia (potrwa kilka sekund)...")
 
         config = SolverConfig(
-            iterations=100000,
+            iterations=300000,
             num_restarts=3
         )
         
