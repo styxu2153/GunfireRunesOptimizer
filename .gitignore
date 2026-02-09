@@ -92,3 +92,6 @@ dmypy.json
 
 # Backup files
 * — kopia.py
+
+# Editor settings
+.vscode/
