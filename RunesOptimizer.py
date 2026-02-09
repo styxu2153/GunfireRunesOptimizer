@@ -48,7 +48,7 @@ def main() -> None:
         print("Szukam najlepszego ulozenia (potrwa kilka sekund)...")
 
         config = SolverConfig(
-            iterations=300000,
+            iterations=100000,
             num_restarts=3
         )
         

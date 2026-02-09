@@ -62,11 +62,13 @@ class BoardState:
 
     def calculate_total_score(self) -> float:
         """
-        Calculate the total score with priority bonus for high-max-level runes.
+        Calculate the total score with multiple prioritization rules.
         
-        The scoring uses a weighted system where points given to runes with
-        higher max_level contribute more to the score. This ensures the 
-        optimizer prioritizes filling high-max-level runes first.
+        Priority hierarchy (in order of importance):
+        1. Base score: Sum of all rune levels (weight = 1.0 per level)
+        2. High max_level priority: Runes with higher max_level get weighted bonus
+        3. Max-level achievement: Bonus for sub-10 runes reaching their max
+        4. Even-level preference: Small bonus for even levels (2, 4, 6, 8, 10)
         
         Returns:
             float: Weighted score where integer part approximates total levels.
@@ -93,34 +95,37 @@ class BoardState:
                     target_rune = rune_positions[(target_x, target_y)]
                     target_rune.raw_score += boost
 
-        # Calculate total score with priority weighting
-        # Each point to a high-max-level rune is worth more than a point to a low-max-level rune
-        max_possible_level = max((r.max_level for r in self.runes), default=1)
-        total_score: float = 0.0
+        total_levels = 0
+        r10_level = 0
+        maxed_sub10_count = 0
+        even_count = 0
         
         for r in self.runes:
             final = min(r.raw_score, r.max_level)
             r.current_level = final
+            total_levels += final
             
-            # Base score is the actual level
-            total_score += final
+            if r.max_level == 10:
+                r10_level = final
+            elif final == r.max_level:
+                maxed_sub10_count += 1
             
-            # Priority bonus: each point to a high-max rune gets a weighted bonus
-            # The bonus is proportional to how "important" the rune is (max_level / max_possible)
-            # and scales with the number of points given
-            if r.max_level > 0 and max_possible_level > 0:
-                priority_weight = r.max_level / max_possible_level
-                # Strong priority: each point to a max-level rune adds 0.5 bonus
-                total_score += final * priority_weight * 0.5
-            
-            # Even-level bonus: prefer even levels (2, 4, 6, 8, 10) over odd
-            # since bonuses are given every 2 points.
-            # Aggressive: +0.1 makes 8 (even) preferred over 9 (odd) even at 1 point cost
             if final > 0 and final % 2 == 0:
-                total_score += 0.5
+                even_count += 1
+                
+        # Heuristic score based on priorities (Strict Hierarchy):
+        # 1. R10 Level (Highest Priority)
+        # 2. Total Sum of Levels
+        # 3. Maxed Sub-10 Count
+        # 4. Even Level Count (Lowest Priority)
+        # Weights are chosen to ensure hierarchy while staying within reasonable range for the solver
+        score = (r10_level * 100.0) + (total_levels * 1.0) + (maxed_sub10_count * 0.1) + (even_count * 0.01)
+        return score
 
-        return total_score
+    def get_total_rune_levels(self) -> int:
+        """Returns the actual sum of all rune levels."""
+        return sum(min(r.raw_score, r.max_level) for r in self.runes)
 
     def get_integer_score(self) -> int:
-        """Returns only the integer part of the score (total rune levels)."""
-        return int(self.calculate_total_score())
+        """Returns the total sum of levels for display purposes."""
+        return self.get_total_rune_levels()

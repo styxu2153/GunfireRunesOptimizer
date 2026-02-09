@@ -175,13 +175,57 @@ class TestBoardState:
         state2.grid[(1, 0)] = rune2
         score2 = state2.calculate_total_score()
         
-        # Even level (4) should get bonus that makes difference > 1 point
-        # score1 = 4 + 4*1*0.5 + 0.05 = 6.05
-        # score2 = 3 + 3*1*0.5 + 0 = 4.5
+        # Even level (4) should have bonus in decimal part
         assert rune1.current_level == 4
         assert rune2.current_level == 3
-        # The even level should have bonus
         assert score1 > score2
+        # score1: (4*100) + 4 + 0.01 = 404.01
+        # score2: (3*100) + 3 + 0 = 303.0
+
+    def test_sub_10_max_achievement_bonus(self) -> None:
+        """Test that sub-10 runes get a bonus for reaching max level."""
+        # Scenario 1: Rune at max level (6/6)
+        rune1 = Rune("R6", 6)
+        stone1 = Stone("K1", [StoneVector(1, 0, 6)])
+        
+        state1 = BoardState(runes=[rune1], stones=[stone1])
+        state1.grid[(0, 0)] = stone1
+        state1.grid[(1, 0)] = rune1
+        score1 = state1.calculate_total_score()
+        
+        # Scenario 2: Rune nearly at max level (5/6)
+        rune2 = Rune("R6", 6)
+        stone2 = Stone("K1", [StoneVector(1, 0, 5)])
+        
+        state2 = BoardState(runes=[rune2], stones=[stone2])
+        state2.grid[(0, 0)] = stone2
+        state2.grid[(1, 0)] = rune2
+        score2 = state2.calculate_total_score()
+        
+        # Difference should be > 1.0 (1.0 for level + 0.1 for max bonus + even bonus)
+        assert score1 - score2 > 1.0
+
+    def test_priority_hierarchy(self) -> None:
+        """Verify the priority: 10/10 > 6/6 > 6/5."""
+        rune_10 = Rune("R10", 10)
+        rune_6 = Rune("R6", 6)
+        
+        # 1. 10/10 case (R10 level 5, R6 level 0)
+        state_10 = BoardState(runes=[rune_10, rune_6], stones=[Stone("K1", [StoneVector(1,0,5)])])
+        state_10.grid[(0,0)] = state_10.stones[0]
+        state_10.grid[(1,0)] = rune_10
+        score_10 = state_10.calculate_total_score()
+        
+        # 2. 6/6 case (R10 level 0, R6 level 6)
+        state_6_max = BoardState(runes=[rune_10, rune_6], stones=[Stone("K1", [StoneVector(1,0,6)])])
+        state_6_max.grid[(0,0)] = state_6_max.stones[0]
+        state_6_max.grid[(1,0)] = rune_6
+        score_6_max = state_6_max.calculate_total_score()
+        
+        # R10 level 5 should win over R6 level 6 due to highest priority
+        assert score_10 > score_6_max
+        assert state_10.get_integer_score() == 5
+        assert state_6_max.get_integer_score() == 6
 
 
 if __name__ == "__main__":
