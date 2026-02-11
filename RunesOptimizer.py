@@ -8,6 +8,7 @@ the total rune levels while prioritizing high-max-level runes.
 from rune_parser import parse_input_data
 from solver import solve_with_restarts, SolverConfig
 from visualization import print_board
+from optimizer_config import PRESETS, DEFAULT_PRESET
 import time
 
 # ==============================================================================
@@ -52,6 +53,10 @@ INPUT_STONES = """
 # K1 to ciag przed pierwszym przecinkiem.
 # K2 to ciag miedzy pierwszym a drugim przecinkiem.
 # K3 to ciag na koncu.
+#
+# 3. WYBOR PROFILU OBLICZEN (Z pliku optimizer_config.py)
+#    Dostepne: "FAST", "BALANCED", "PRECISE", "ULTIMATE"
+SELECTED_PRESET = "PRECISE"
 
 # ==============================================================================
 #      MAIN
@@ -69,13 +74,9 @@ def main() -> None:
         print("Szukam najlepszego ulozenia (potrwa kilka sekund)...")
         start_time = time.time()
 
-        config = SolverConfig(
-            iterations=600000,
-            num_restarts=72,
-            initial_temperature=40.0,
-            cooling_rate=0.999985,
-            workers=12
-        )
+        # Load config from central presets
+        config = PRESETS.get(SELECTED_PRESET, PRESETS[DEFAULT_PRESET])
+        print(f"Uzywam profilu: {SELECTED_PRESET} ({config.iterations} iteracji, {config.num_restarts} restartow)")
         
         best_state, _ = solve_with_restarts(my_runes, my_stones, config)
         end_time = time.time()

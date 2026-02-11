@@ -4,6 +4,7 @@ import statistics
 from rune_parser import parse_input_data
 from solver import solve_with_restarts, SolverConfig
 from models import BoardState
+from optimizer_config import PRESETS
 
 # Test Data
 INPUT_RUNES = "10 6 6 6 6 6 4"
@@ -21,11 +22,8 @@ INPUT_STONES = """
 def benchmark():
     runes, stones = parse_input_data(INPUT_RUNES, INPUT_STONES)
     
-    configs = [
-        ("Current Balanced", SolverConfig(iterations=200000, num_restarts=10, initial_temperature=25.0, cooling_rate=0.99995, workers=1)),
-        ("Parallel Balanced", SolverConfig(iterations=200000, num_restarts=30, initial_temperature=25.0, cooling_rate=0.99995, workers=8)),
-        ("Ryzen 7800X3D Max", SolverConfig(iterations=400000, num_restarts=60, initial_temperature=35.0, cooling_rate=0.99997, workers=12)),
-    ]
+    # Use centralized presets for benchmarking
+    configs = [(name, config) for name, config in PRESETS.items()]
     
     # Run each test 3 times to get an average (SA is stochastic)
     NUM_RUNS = 3
