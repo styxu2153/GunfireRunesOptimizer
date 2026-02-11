@@ -8,6 +8,7 @@ the total rune levels while prioritizing high-max-level runes.
 from rune_parser import parse_input_data
 from solver import solve_with_restarts, SolverConfig
 from visualization import print_board
+import time
 
 # ==============================================================================
 #      STREFA DANYCH WEJSCIOWYCH (TUTAJ WPISUJESZ SWOJE DANE)
@@ -15,18 +16,38 @@ from visualization import print_board
 
 # 1. POZIOMY RUN (oddzielone spacja)
 #    Wpisz tylko maksymalne poziomy. Program sam nazwie je R1, R2, R3...
-INPUT_RUNES = "10 6 6 4"
+INPUT_RUNES = "10 6 6 6 6 6 4"
 
 # 2. KONFIGURACJA KAMIENI (oddzielone PRZECINKAMI)
 #    Format: (x, y, boost)
 #    Grupy nawiasow oddzielone przecinkiem to osobne kamienie (K1, K2...).
 #    Wspolrzedne: (1,0)=Prawo, (-1,0)=Lewo, (0,1)=Gora, (0,-1)=Dol
+
 INPUT_STONES = """
-(0, 1, 2) (-1, 0, 2) (1, 0, 2) (1, -1, 2) (0, -1, 2), 
-(1, 0, 2) (1, 1, 1), 
-(1, 1, 2) (2, 2, 1),
-(1, 1, 3) (1, 0, 3)
+(-1, 1, 4) (1, 0, 2) (2, 0, 2) (1, -1, 2) (0, -1, 2) (0, -2, 2),
+(0, 1, 2) (1, 1, 2) (1, 0, 3),
+(1, 1, 1) (2, 2, 2),
+(1, 0, 1) (0, -1, 3),
+(2, 0, 4) (0, -2, 4),
+(0, 2, 2) (2, 0, 1),
+(2, 0, 3),
+(2, 2, 3)
 """
+
+# INPUT_RUNES = "10 8 8 8 6 6 4"
+
+# INPUT_STONES = """
+# (-1, 1, 2) (1, 0, 2) (2, 0, 2) (1, -1, 2) (0, -1, 2) (0, -2, 2),
+# (1, 1, 3) (1, 0, 2) (0, -1, 3),
+# (1, 1, 2) (2, 2, 1),
+# (1, 0, 4) (2, 0, 4),
+# (1, 0, 3) (2, 0, 2),
+# (1, 1, 3),
+# (1, 1, 4),
+# (2, 2, 3),
+# (2, 0, 4)
+# """
+
 # Powyzej:
 # K1 to ciag przed pierwszym przecinkiem.
 # K2 to ciag miedzy pierwszym a drugim przecinkiem.
@@ -46,16 +67,21 @@ def main() -> None:
         print(f"Wczytano: {len(my_stones)} Kamieni.")
 
         print("Szukam najlepszego ulozenia (potrwa kilka sekund)...")
+        start_time = time.time()
 
         config = SolverConfig(
-            iterations=300000,
-            num_restarts=6,
-            initial_temperature=25.0,
-            cooling_rate=0.99996
+            iterations=600000,
+            num_restarts=72,
+            initial_temperature=40.0,
+            cooling_rate=0.999985,
+            workers=12
         )
         
         best_state, _ = solve_with_restarts(my_runes, my_stones, config)
+        end_time = time.time()
+        
         print_board(best_state)
+        print(f"\n[INFO] Calkowity czas obliczen: {end_time - start_time:.2f} sekund.")
 
     except Exception as e:
         print("\n!!! BLAD WPROWADZANIA DANYCH !!!")

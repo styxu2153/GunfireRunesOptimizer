@@ -5,8 +5,9 @@ from __future__ import annotations
 import copy
 import math
 import random
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 from models import BoardState, Rune, Stone, GRID_SIZE
 
@@ -21,6 +22,7 @@ class SolverConfig:
     min_temperature: float = 0.001
     rotation_probability: float = 0.4
     num_restarts: int = 3
+    workers: int = 1
 
 
 def _create_initial_state(
@@ -155,6 +157,15 @@ def solve_layout(
     return final_state, best_score
 
 
+def _run_single_solve(args: Tuple[List[Rune], List[Stone], SolverConfig]) -> Tuple[BoardState, float]:
+    """Helper for parallel execution to wrap solve_layout."""
+    runes, stones, config = args
+    # Fresh objects for each solve (important for parallel safety)
+    runes_copy = [Rune(r.id, r.max_level) for r in runes]
+    stones_copy = [Stone(s.id, list(s.base_vectors)) for s in stones]
+    return solve_layout(runes_copy, stones_copy, config)
+
+
 def solve_with_restarts(
     runes: List[Rune], 
     stones: List[Stone], 
@@ -174,18 +185,30 @@ def solve_with_restarts(
     if config is None:
         config = SolverConfig()
 
-    best_overall_state: BoardState | None = None
-    best_overall_score: float = -1.0
+    if config.workers <= 1:
+        # Serial execution
+        best_overall_state: BoardState | None = None
+        best_overall_score: float = -1.0
 
-    for _ in range(config.num_restarts):
-        # Create fresh copies of runes and stones for each restart
-        runes_copy = [Rune(r.id, r.max_level) for r in runes]
-        stones_copy = [Stone(s.id, list(s.base_vectors)) for s in stones]
+        for _ in range(config.num_restarts):
+            state, score = _run_single_solve((runes, stones, config))
+            if score > best_overall_score:
+                best_overall_score = score
+                best_overall_state = state
+        return best_overall_state, best_overall_score
+    else:
+        # Parallel execution
+        best_overall_state: BoardState | None = None
+        best_overall_score: float = -1.0
         
-        state, score = solve_layout(runes_copy, stones_copy, config)
-        if score > best_overall_score:
-            best_overall_score = score
-            best_overall_state = state
-
-    assert best_overall_state is not None
-    return best_overall_state, best_overall_score
+        tasks = [(runes, stones, config) for _ in range(config.num_restarts)]
+        
+        with ProcessPoolExecutor(max_workers=config.workers) as executor:
+            results = list(executor.map(_run_single_solve, tasks))
+            
+        for state, score in results:
+            if score > best_overall_score:
+                best_overall_score = score
+                best_overall_state = state
+                
+        return best_overall_state, best_overall_score
